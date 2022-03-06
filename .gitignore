@@ -1,0 +1,6 @@
+# these files are better off the public
+secrets
+# these files are not mine so they are excluded from public domain in case
+# some day i decide that I want to make all these scripts public
+see_swap.sh
+phpfm.php
