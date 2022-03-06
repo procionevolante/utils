@@ -1,5 +1,6 @@
 The scripts in this repo are all free to use, modify and distribute freely
-under the terms of the WTFPL.
+under the terms of the Do What The Fuck You Want To Public License, Version 2,
+as published by Sam Hocevar. See the COPYING file for more details.
 
 Some of them use `nawk` instead of `gawk` (which is what it's usually installed
 as default AWK interpreter) to be lighter.  
