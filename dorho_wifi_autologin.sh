@@ -1,7 +1,7 @@
 #!/bin/sh
 # simple script that shows how a stupid wifi login can be fooled easily.
 # This scripts also shows that I'm really lazy at tipying passwords very often
-source secrets
+source ~/bin/secrets
 voucher="${dorho_voucher}"
 
 echo 'initiating "DOrHO WiFi bamboozler 9000" protocol...'

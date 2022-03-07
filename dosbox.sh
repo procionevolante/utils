@@ -13,7 +13,7 @@
 output_fallback=DVI-1
 # ---
 
-source secrets
+source ~/bin/secrets
 
 mountpoint -q "$freedos_mnt_dir"
 if [ $? -ne 0 ]; then

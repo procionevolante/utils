@@ -1,7 +1,7 @@
 #!/bin/bash
 # simple background manager with automatic changing.
 # Tested on sway and i3wm
-source secrets
+source ~/bin/secrets
 imgdir="${background_img_dir}"
 interval=10m
 declare -a imgs

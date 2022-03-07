@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from socket import socket
-import secrets import dorho_voucher
+from secrets import dorho_voucher
 
 # -----------------------------------------------------------------------------
 voucher=dorho_voucher

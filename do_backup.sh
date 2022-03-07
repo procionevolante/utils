@@ -1,7 +1,7 @@
 #!/bin/bash
 #	backup of directory BACKUPS on server
 
-source secrets
+source ~/bin/secrets
 #	NOTE:	put directories without the ending "/"
 declare locale="${backup_locale_dir}"
 declare remote="${backup_remote_dir}"
