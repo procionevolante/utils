@@ -1,0 +1,82 @@
+#!/bin/sh
+
+usage() {
+    cat << EOF
+USAGE: eclipsecc [-rc] [-w workspace-dir -p project-name]
+-h print this help
+-w workspace-dir: eclipse's workspace directory.
+   default: parent dir (..)
+-p project-name: eclipses's project name
+   default: current dir's name
+-t make a custom target
+   Useful if the eclipse project is not using the "standard"
+   Debug_FLASH/Release_FLASH configuration names
+-r perform a release build
+   same as -t Release_FLASH
+-c perform a clean build
+   like make clean && make
+EOF
+}
+
+echo ECLIPSE CLI COMPILER
+echo
+
+if [ "$1" == '--help' ]; then
+    usage
+    exit 1
+fi
+
+while getopts hw:p:t:rc opt; do
+    case "$opt" in
+        \:) echo "required argument not found for '$OPTARG'"
+           usage
+           exit 1
+           ;;
+        \?) usage
+            exit 1
+            ;;
+        h) usage
+           exit
+           ;;
+        t) configuration="$OPTARG";;
+        r) configuration="Release_FLASH";;
+        c) clean="$opt";;
+        w) workspace="$OPTARG";;
+        p) project="$OPTARG";;
+    esac
+done
+
+if [ -z "$workspace" -a -n "$project" ] || [ -n "$workspace" -a -z "$project" ]; then
+    echo 'you need to specify both workspace or project (or neither)'
+    exit 1
+fi
+
+workspace="${workspace:-..}"
+project="${project:-$(basename "$PWD")}"
+
+# default eclipse configuration if no other has been specified
+configuration="${configuration:-Debug_FLASH}"
+
+if [ -n "$clean" ]; then
+    action="cleanBuild"
+else
+    action="build"
+fi
+
+eclipsec='/c/NXP/S32DS_ARM_v2.2/eclipse/eclipsec.exe'
+options='-nosplash -application org.eclipse.cdt.managedbuilder.core.headlessbuild'
+
+echo "eclipse workspace directory: '$workspace'"
+echo "eclipse project: '$project'"
+echo "action: '$action'"
+if [ ! -f "$workspace/$project/.cproject" ]; then
+    echo "project '$workspace/$project' not found!"
+    echo 'pass -h to show help'
+    exit 1
+fi
+
+set -x
+"$eclipsec" $options \
+    -data "$workspace" \
+    -import "$workspace/$project" \
+    "-$action" "$project/$configuration"
