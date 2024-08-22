@@ -1,0 +1,57 @@
+#!/bin/bash
+
+# svn wrapper to make it more user friendly in the CLI, like git
+# can also be sourced in bashrc and aliased to svn for a faster experience on
+# windows which is slow at starting new processes
+
+mysvn()
+{
+    case "$1" in
+        diff|di)
+            # colored diff with bat, print function names
+            shift
+            svn diff -x -p "$@" | bat -p --pager 'less -iFR'
+            ;;
+        dstat|dst)
+            # like git diff --stat: show also how much every file changed
+            local w=${COLUMNS:-80}
+            if [ $w -gt 100 ]; then
+                w=100
+            fi
+            shift 
+            svn diff "$@" | diffstat -C -w $w
+            ;;
+        help)
+            # pager for manual (-F: quit if stdin fits one screen)
+            svn "$@" | less -F ;;
+        blame)
+            # include line number in blame
+            svn "$@" | less -iFN ;;
+        log)
+            if [[ "$*" == *"--diff"* ]]; then
+                # svn log --diff -c revNum ~~ git show
+                svn "$@" | bat -p -l diff --pager= 'less -iFR'
+            else
+                svn "$@" | less -F
+            fi
+            ;;
+        status|stat|st)
+            svn "$@" | less -F ;;
+        commit|ci)
+            local preCommitHook="$(svn info --show-item wc-root)/.svn/hooks/pre-commit"
+            shift
+            if [ ! -x "$preCommitHook" ] || "$preCommitHook" "$@"; then
+                svn commit "$@"
+            else
+                echo commit aborted by pre-commit hook >&2
+            fi
+            ;;
+        *)
+            svn "$@" ;;
+    esac
+}
+
+# if not sourced, invoke the function
+if ! (return 0 2>/dev/null); then
+    mysvn "$@"
+fi

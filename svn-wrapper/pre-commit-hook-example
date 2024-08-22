@@ -1,0 +1,25 @@
+#!/bin/bash
+
+declare -a filelist
+
+for arg in "$@"; do
+  if [ -e "$arg" ]; then
+    filelist+=("$arg")
+  fi
+done
+
+if [ ${#filelist[@]} -eq 0 ]; then
+  filelist+=(".")
+fi
+
+difflist="$(svn diff -x -U0 "${filelist[@]}")"
+if grep -qiE '^\+.*(fixme|todo)' <<< "$difflist"; then
+  echo TODO or FIXME comments found:
+  echo
+  grep -iEe '^\+.*(fixme|todo)' -e '^index:' <<< "$difflist"
+  echo
+  echo to commit anyway, bypass the SVN wrapper:
+  echo '$> `which svn` commit ...'
+
+  exit 1
+fi
