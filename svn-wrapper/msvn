@@ -12,6 +12,11 @@ mysvn()
             # colored diff with bat if stdout is a terminal, print function names
             svn diff -x -p "$@" | ([ -t 1 ] && bat -p || cat)
             ;;
+        ddiff|ddi|sddi)
+            # diff using `delta` as output decorator. s* -> side-by-side view
+            [ ! -t 1 ] && return 1
+            svn diff -x -p "${@:2}" | delta ${1/sddi/--side-by-side}
+            ;;
         dstat|dst)
             # like git diff --stat: show also how much every file changed
             local w=${COLUMNS:-80}
