@@ -8,9 +8,9 @@ mysvn()
 {
     case "$1" in
         diff|di)
-            # colored diff with bat, print function names
             shift
-            svn diff -x -p "$@" | bat -p --pager 'less -iFR'
+            # colored diff with bat if stdout is a terminal, print function names
+            svn diff -x -p "$@" | ([ -t 1 ] && bat -p || cat)
             ;;
         dstat|dst)
             # like git diff --stat: show also how much every file changed
@@ -30,7 +30,7 @@ mysvn()
         log)
             if [[ "$*" == *"--diff"* ]]; then
                 # svn log --diff -c revNum ~~ git show
-                svn "$@" | bat -p -l diff --pager= 'less -iFR'
+                svn "$@" | bat -p -l diff
             else
                 svn "$@" | less -F
             fi
