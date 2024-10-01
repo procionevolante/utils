@@ -51,6 +51,10 @@ mysvn()
                 echo commit aborted by pre-commit hook >&2
             fi
             ;;
+        sr) # set Svn Root variable
+            declare -g sr="^$(svn info | grep 'Relative URL:' | cut -d '^' -f 2- | sed -E 's;(/branches)/?.*$;\1;')"
+            printf "svn root dir shortcut set: \$sr='%s'\n" "$sr"
+            ;;
         *)
             svn "$@" ;;
     esac
