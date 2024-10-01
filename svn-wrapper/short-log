@@ -1,0 +1,30 @@
+#!/bin/awk -f
+
+# pretty-print svn log in the style of git log --oneline
+
+/-----/ {
+    getline # skip commit-start marker
+    if ($0 == "") # skip malformed svn output
+        next
+
+    split($0, fields, / \| /)
+    id = fields[1]
+    author = fields[2]
+    timestamp = fields[3]
+    sub(/ \+.*$/, "", timestamp) # shorten to minimum understandable
+
+    getline # will read either empty separator line or "Merged via.."
+    if ($0 ~ /^Merged via:/) {
+        mergedVia = $0
+        getline # read empty separator line
+    } else
+        mergedVia = ""
+
+    getline # read commit msg header
+    msg = $0
+
+    printf("%-6s %s %s: %.80s\n", id, timestamp, author, msg)
+    if (mergedVia != "")
+        print(mergedVia)
+
+}
