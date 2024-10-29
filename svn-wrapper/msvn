@@ -52,8 +52,8 @@ mysvn()
             fi
             ;;
         sr) # set Svn Root variable
-            declare -g sr="^$(svn info | grep 'Relative URL:' | cut -d '^' -f 2- | sed -E 's;(/branches)/?.*$;\1;')"
-            printf "svn root dir shortcut set: \$sr='%s'\n" "$sr"
+            declare -g sr="^$(svn info | grep 'Relative URL:' | cut -d '^' -f 2- | sed -E 's;/(branches|trunk)/?.*$;;')"
+            printf "sr='%s' # svn root dir shortcut\n" "$sr"
             ;;
         *)
             svn "$@" ;;
