@@ -21,10 +21,11 @@
         mergedVia = ""
 
     getline # read commit msg header
-    msg = $0
+    title = $0
 
-    printf("%-6s %s %s: %.80s\n", id, timestamp, author, msg)
-    if (mergedVia != "")
-        print(mergedVia)
-
+    # %.80s -> print max 80 chars (instead of ALWAYS 80 chars)
+    #printf("%-6s %s %s: %.80s\n", id, timestamp, author, title)
+    printf("%-6s %.80s\n", id, title)
+#   if (mergedVia != "")
+#       print(mergedVia)
 }

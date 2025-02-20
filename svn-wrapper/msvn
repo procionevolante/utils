@@ -40,6 +40,10 @@ mysvn()
                 svn "$@" | less -F
             fi
             ;;
+        slog) # "short" log. Similar to git log --oneline
+            shift 1
+            svn log "$@" | ~/src/utils/svn-wrapper/short-log | less -F
+            ;;
         status|stat|st)
             svn "$@" | less -F ;;
         commit|ci)
