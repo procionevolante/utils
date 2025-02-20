@@ -3,8 +3,8 @@
 # pretty-print svn log in the style of git log --oneline
 
 /-----/ {
-    getline # skip commit-start marker
-    if ($0 == "") # skip malformed svn output
+    eof = !getline # skip commit-start marker
+    if ($0 == "" || eof) # skip malformed svn output or exit on EOF
         next
 
     split($0, fields, / \| /)
