@@ -4,63 +4,106 @@
 # can also be sourced in bashrc and aliased to svn for a faster experience on
 # windows which is slow at starting new processes
 
+# colored diff with bat if stdout is a terminal, print function names
+_mysvn_diff()
+{
+    shift
+    svn diff -x -p "$@" | ([ -t 1 ] && bat -p || cat)
+}
+
+# diff using `delta` as output decorator.
+_mysvn_deltadiff()
+{
+    [ ! -t 1 ] && return 1
+    shift
+    svn diff -x -p "$@" | delta
+}
+
+# diff using `delta` as output decorator with "side-by-side" view
+_mysvn_2sidedeltadiff()
+{
+    [ ! -t 1 ] && return 1
+    shift
+    svn diff -x -p "$@" | delta --side-by-side
+}
+
+# like git diff --stat: show also how much every file changed using `diffstat`
+_mysvn_diffstat()
+{
+    local w=${COLUMNS:-80}
+    if [ -z "$w" -o "$w" -gt 100 ]; then
+        w=100
+    fi
+    shift
+    svn diff "$@" | diffstat -C -w $w
+}
+
+# use pager (-F: quit if stdin fits one screen)
+_mysvn_usepager()
+{
+    svn "$@" | less -F
+}
+
+# use pager and include line number in blame
+_mysvn_blame()
+{
+    svn "$@" | less -iFN
+}
+
+# use pager and color output if using --diff svn option
+_mysvn_log()
+{
+    if [[ "$*" == *"--diff"* ]]; then
+        # svn log --diff -c revNum ~~ git show
+        svn "$@" | bat -p -l diff
+    else
+        svn "$@" | less -F
+    fi
+}
+
+# "short" log. Similar to git log --oneline
+_mysvn_shortlog()
+{
+    shift 1
+    svn log "$@" | ~/src/utils/svn-wrapper/short-log | less -F
+}
+
+# commit with pre-commit hook support like in git
+_mysvn_commit()
+{
+    local preCommitHook="$(svn info --show-item wc-root)/.svn/hooks/pre-commit"
+    shift
+    if [ ! -x "$preCommitHook" ] || "$preCommitHook" "$@"; then
+        svn commit "$@"
+    else
+        echo commit aborted by pre-commit hook >&2
+    fi
+}
+
+ # set Svn Root variable (to use it in other commands)
+_mysvn_setrootvar()
+{
+    declare -g sr="^$(svn info | grep 'Relative URL:' | cut -d '^' -f 2- | sed -E 's;/(branches|trunk)/?.*$;;')"
+    printf "sr='%s' # svn root dir shortcut\n" "$sr"
+}
+
 mysvn()
 {
     case "$1" in
-        diff|di)
-            shift
-            # colored diff with bat if stdout is a terminal, print function names
-            svn diff -x -p "$@" | ([ -t 1 ] && bat -p || cat)
-            ;;
-        ddiff|ddi|sddi)
-            # diff using `delta` as output decorator. s* -> side-by-side view
-            [ ! -t 1 ] && return 1
-            svn diff -x -p "${@:2}" | delta ${1/sddi/--side-by-side}
-            ;;
-        dstat|dst)
-            # like git diff --stat: show also how much every file changed
-            local w=${COLUMNS:-80}
-            if [ $w -gt 100 ]; then
-                w=100
-            fi
-            shift 
-            svn diff "$@" | diffstat -C -w $w
-            ;;
-        help)
-            # pager for manual (-F: quit if stdin fits one screen)
-            svn "$@" | less -F ;;
-        blame)
-            # include line number in blame
-            svn "$@" | less -iFN ;;
-        log)
-            if [[ "$*" == *"--diff"* ]]; then
-                # svn log --diff -c revNum ~~ git show
-                svn "$@" | bat -p -l diff
-            else
-                svn "$@" | less -F
-            fi
-            ;;
-        slog) # "short" log. Similar to git log --oneline
-            shift 1
-            svn log "$@" | ~/src/utils/svn-wrapper/short-log | less -F
-            ;;
-        status|stat|st)
-            svn "$@" | less -F ;;
-        commit|ci)
-            local preCommitHook="$(svn info --show-item wc-root)/.svn/hooks/pre-commit"
-            shift
-            if [ ! -x "$preCommitHook" ] || "$preCommitHook" "$@"; then
-                svn commit "$@"
-            else
-                echo commit aborted by pre-commit hook >&2
-            fi
-            ;;
-        sr) # set Svn Root variable
-            declare -g sr="^$(svn info | grep 'Relative URL:' | cut -d '^' -f 2- | sed -E 's;/(branches|trunk)/?.*$;;')"
-            printf "sr='%s' # svn root dir shortcut\n" "$sr"
-            ;;
-        *)
-            svn "$@" ;;
+        diff|di)    _mysvn_diff "$@" ;;
+        ddiff|ddi)  _mysvn_deltadiff "$@" ;;
+        sddi)       _mysvn_2sidedeltadiff "$@" ;;
+        dstat|dst)  _mysvn_diffstat "$@" ;;
+        help)       _mysvn_usepager "$@" ;;
+        blame)      _mysvn_blame "$@" ;;
+        log)        _mysvn_log "$@" ;;
+        slog)       _mysvn_shortlog "$@" ;;
+        status|stat|st) _mysvn_usepager "$@" ;;
+        commit|ci)  _mysvn_commit "$@" ;;
+        sr)         _mysvn_setrootvar "$@" ;;
+
+        # handle other commands using true svn directly
+        *)          svn "$@" ;;
     esac
 }
 
