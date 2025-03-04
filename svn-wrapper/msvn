@@ -4,30 +4,48 @@
 # can also be sourced in bashrc and aliased to svn for a faster experience on
 # windows which is slow at starting new processes
 
-# colored diff with bat if stdout is a terminal, print function names
+# Print the SVN repository root directory in relative URL format (^/...)
+_mysvn_reporoot()
+{
+    local root="$(svn info --show-item relative-url | sed -E 's;/(branches|trunk)/?.*$;;')"
+    printf '%s' "$root" # don't expand $root if it's a valid format string
+}
+
+# Expand all arguments starting with a "/" to the repo root, then launch svn
+# Easier than doing "eval `svn sr`" and then run "svn .. $sr ..."
+_mysvn_expandedpath()
+{
+    svn "${@/#\//$(_mysvn_reporoot)\/}"
+}
+
+# Colored diff with bat if stdout is a terminal, print function names
 _mysvn_diff()
 {
     shift
-    svn diff -x -p "$@" | ([ -t 1 ] && bat -p || cat)
+    if [ -t 1 ]; then
+        _mysvn_expandedpath diff -x -p "$@" | bat -p
+    else
+        _mysvn_expandedpath diff -x -p "$@"
+    fi
 }
 
-# diff using `delta` as output decorator.
+# Diff using `delta` as output decorator.
 _mysvn_deltadiff()
 {
     [ ! -t 1 ] && return 1
     shift
-    svn diff -x -p "$@" | delta
+    _mysvn_expandedpath diff -x -p "$@" | delta
 }
 
-# diff using `delta` as output decorator with "side-by-side" view
+# Diff using `delta` as output decorator with "side-by-side" view
 _mysvn_2sidedeltadiff()
 {
     [ ! -t 1 ] && return 1
     shift
-    svn diff -x -p "$@" | delta --side-by-side
+    _mysvn_expandedpath diff -x -p "$@" | delta --side-by-side
 }
 
-# like git diff --stat: show also how much every file changed using `diffstat`
+# Like git diff --stat: show also how much every file changed using `diffstat`
 _mysvn_diffstat()
 {
     local w=${COLUMNS:-80}
@@ -35,40 +53,43 @@ _mysvn_diffstat()
         w=100
     fi
     shift
-    svn diff "$@" | diffstat -C -w $w
+    _mysvn_expandedpath diff "$@" | diffstat -C -w $w
 }
 
-# use pager (-F: quit if stdin fits one screen)
+# Use pager (-F: quit if stdin fits one screen)
 _mysvn_usepager()
 {
     svn "$@" | less -F
 }
 
-# use pager and include line number in blame
+# Use pager and include line number in blame
 _mysvn_blame()
 {
-    svn "$@" | less -iFN
+    shift
+    _mysvn_expandedpath blame "$@" | less -iFN
 }
 
-# use pager and color output if using --diff svn option
+# Use pager and color output if using --diff svn option
 _mysvn_log()
 {
+    shift
+    declare -a args
     if [[ "$*" == *"--diff"* ]]; then
         # svn log --diff -c revNum ~~ git show
-        svn "$@" | bat -p -l diff
+        _mysvn_expandedpath log "$@" | bat -p -l diff
     else
-        svn "$@" | less -F
+        _mysvn_expandedpath log "$@" | less -F
     fi
 }
 
 # "short" log. Similar to git log --oneline
 _mysvn_shortlog()
 {
-    shift 1
-    svn log "$@" | ~/src/utils/svn-wrapper/short-log | less -F
+    shift
+    _mysvn_expandedpath log "$@" | ~/src/utils/svn-wrapper/short-log | less -F
 }
 
-# commit with pre-commit hook support like in git
+# Commit cmd with pre-commit hook support like in git
 _mysvn_commit()
 {
     local preCommitHook="$(svn info --show-item wc-root)/.svn/hooks/pre-commit"
@@ -83,7 +104,7 @@ _mysvn_commit()
  # set Svn Root variable (to use it in other commands)
 _mysvn_setrootvar()
 {
-    declare -g sr="^$(svn info | grep 'Relative URL:' | cut -d '^' -f 2- | sed -E 's;/(branches|trunk)/?.*$;;')"
+    declare -g sr="$(_mysvn_reporoot)"
     printf "sr='%s' # svn root dir shortcut\n" "$sr"
 }
 
@@ -96,6 +117,7 @@ mysvn()
         dstat|dst)  _mysvn_diffstat "$@" ;;
         help)       _mysvn_usepager "$@" ;;
         blame)      _mysvn_blame "$@" ;;
+        ls)         _mysvn_expandedpath "$@" ;;
         log)        _mysvn_log "$@" ;;
         slog)       _mysvn_shortlog "$@" ;;
         status|stat|st) _mysvn_usepager "$@" ;;
