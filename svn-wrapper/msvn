@@ -15,7 +15,14 @@ _mysvn_reporoot()
 # Easier than doing "eval `svn sr`" and then run "svn .. $sr ..."
 _mysvn_expandedpath()
 {
-    svn "${@/#\//$(_mysvn_reporoot)\/}"
+    # avoid calling _mysvn_reporoot() unnecessarily
+    for arg in "$@"; do
+        if [[ "$arg" == /* ]]; then
+            svn "${@/#\//$(_mysvn_reporoot)\/}"
+            return $?
+        fi
+    done
+    svn "$@"
 }
 
 # Colored diff with bat if stdout is a terminal, print function names
