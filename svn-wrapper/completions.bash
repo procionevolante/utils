@@ -75,14 +75,24 @@ function _svn_grcut()
 }
 
 # extract stuff from svn info output
-# _svn_info (URL|Repository Root)
+# _svn_info _what_...
+# what=
+# * url
+# * relative-url
+# * repos-root-url
+# * repos-size
+# * last-changed-revision
+# * revision
+# * last-changed-date
+# * last-changed-author
+# * wc-root
 function _svn_info()
 {
-  local what=$1 line=
-  LANG=C LC_MESSAGES=C svn info --non-interactive 2> /dev/null | \
-  while read line ; do
-    [[ $line == *"$what: "* ]] && echo ${line#*: }
-  done
+    local what=
+    for what in "$@"; do
+	LANG=C LC_MESSAGES=C svn info --non-interactive \
+	    --show-item "$what" 2> /dev/null
+    done
 }
 
 # broken since svn 1.7 | FIXME: change to svn status -v ?
@@ -485,7 +495,7 @@ _svn()
 
 	if [[ $cmd = 'merge' || $cmd = 'mergeinfo' ]]
 	then
-	  local here=$(_svn_info URL)
+	  local here=$(_svn_info url relative-url)
 	  # suggest a possible URL for merging
 	  if [[ ! $URL && $stat = 'arg' ]] ; then
 	    # we assume a 'standard' repos with branches and trunk
@@ -500,7 +510,7 @@ _svn()
 	      return 0
 	    else
 	      # no se, let us suggest the repository root...
-	      COMPREPLY=( $(compgen -W $(_svn_info Root)/ -- $cur ) )
+	      COMPREPLY=( $(compgen -W $(_svn_info repos-root-url)/ -- $cur ) )
 	      compopt -o nospace
 	      return 0
 	    fi
