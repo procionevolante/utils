@@ -30,6 +30,14 @@
 
 shopt -s extglob
 
+# print all changelists
+function _svn_changelists()
+{
+    local db="$(_svn_info wc-root)/.svn/wc.db"
+    LANG=C LC_MESSAGES=C sqlite3 "$db" \
+	'select distinct changelist from ACTUAL_NODE;' 2>/dev/null
+}
+
 # Tree helper functions which only use bash, to ease readability.
 
 # look for value associated to key from stdin in K/V hash file format
@@ -297,6 +305,9 @@ _svn()
 	psCmds='propset|pset|ps'
 	propCmds="$psCmds|propget|pget|pg|propedit|pedit|pe|propdel|pdel|pd"
 
+        # subcommands that expect changelist names
+        clistCmds="cl|changelist"
+
 	# possible URL schemas to access a subversion server
 	local urlSchemas='file:/// http:// https:// svn:// svn+ssh://'
 
@@ -305,6 +316,7 @@ _svn()
 	# cmd: the current command if available
 	#    isPropCmd: whether it expects a property name argument
 	#    isPsCmd: whether it also expects a property value argument
+	#    isClistCmd: whether it expects a changelist name argument
 	#    isHelpCmd: whether it is about help
 	#    nExpectArgs: how many arguments are expected by the command
 	# help: help requested about this command (if cmd=='help')
@@ -323,8 +335,8 @@ _svn()
 	# prev: previous command in the loop
 	# last: status of last parameter analyzed
 	# i: index
-	local cmd= isPropCmd= isPsCmd= isHelpCmd= nExpectArgs= isCur= i=0
-	local prev= help= prop= val= isRevProp= last='none' nargs=0 stat=
+	local cmd= isPropCmd= isPsCmd= isClistCmd= isHelpCmd= nExpectArgs= isCur= i=0
+	local prev= help= prop= clist= val= isRevProp= last='none' nargs=0 stat=
 	local options= hasRevPropOpt= hasRevisionOpt= hasRelocateOpt=
 	local acceptOpt= URL= hasReintegrateOpt=
 
@@ -372,6 +384,7 @@ _svn()
 		cmd=$opt
 		[[ $cmd == @($propCmds) ]] && isPropCmd=1
 		[[ $cmd == @($psCmds) ]] && isPsCmd=1
+		[[ $cmd == @($clistCmds) ]] && isClistCmd=1
 		[[ $cmd == @(${helpOpts// /|}) ]] && cmd='help'
 		[[ $cmd = 'help' ]] && isHelpCmd=1
 	        # HELP about a command asked with an option
@@ -391,6 +404,14 @@ _svn()
 		last='help'
 		continue
 	    fi
+
+	    # ChangeLIST cmd
+	    if [[ $isClistCmd && ! $clist && $opt && $opt != -* ]]
+            then
+                clist=$opt
+                last='clist'
+                continue
+            fi
 
 	    # PROPerty name
 	    if [[ $isPropCmd && ! $prop && $opt && $opt != -* ]]
@@ -425,6 +446,9 @@ _svn()
 		      ;;
 		  -h|--help)
 		      isHelpCmd=1
+		      ;;
+		  --cl|--changelist)
+                      hasClistOpt=1
 		      ;;
 		  -F|--file)
 		      val='-F'
@@ -480,6 +504,12 @@ _svn()
 	then
 	    COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
 	    return 0
+	fi
+
+	# suggest all changelists
+	if [[ $stat = 'clist' || ($isClistCmd && ! $clist ) ]];
+	then
+	    COMPREPLY=( $( compgen -W "$(_svn_changelists)" -- $cur ) )
 	fi
 
 	# URL completion
@@ -570,6 +600,8 @@ _svn()
 			mine-conflict theirs-conflict"
 		fi
 	    }
+
+	    [[ $previous == @(--changelist|--cl) ]] && values="$(_svn_changelists)"
 
 	    [[ $previous = '--show-revs' ]] && values='merged eligible'
 
