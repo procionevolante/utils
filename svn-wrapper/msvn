@@ -115,6 +115,21 @@ _mysvn_setrootvar()
     printf "sr='%s' # svn root dir shortcut\n" "$sr"
 }
 
+_svn_completion_lazyload()
+{
+    source ~/src/utils/svn-wrapper/completions.bash && return 124
+}
+
+_mysvn_print_completions()
+{
+    # complete svn directly and not msvn as they have the same options
+    complete -F _svn_completion_lazyload -o bashdefault -o default svn
+
+    # print declarations so caller can `eval` them to import them
+    declare -f _svn_completion_lazyload
+    complete -p svn
+}
+
 mysvn()
 {
     case "$1" in
@@ -130,6 +145,8 @@ mysvn()
         status|stat|st) _mysvn_usepager "$@" ;;
         commit|ci)  _mysvn_commit "$@" ;;
         sr)         _mysvn_setrootvar "$@" ;;
+
+        completions) _mysvn_print_completions ;;
 
         # handle other commands using true svn directly
         *)          svn "$@" ;;
