@@ -1,9 +1,16 @@
 #!/bin/bash
 
+blacklist='fixme todo debug'
+
 declare -a filelist
+declare -a changelist
 
 for arg in "$@"; do
-  if [ -e "$arg" ]; then
+  if [ "$arg" = '--cl' -o "$arg" = '--changelist' ]; then
+    changelist=( '--cl' )
+  elif [ "${#changelist[@]}" = 1 ]; then
+    changelist+=( "$arg" )
+  elif [ -e "$arg" ]; then
     filelist+=("$arg")
   fi
 done
@@ -12,12 +19,12 @@ if [ ${#filelist[@]} -eq 0 ]; then
   filelist+=(".")
 fi
 
-difflist="$(svn diff -x -U0 "${filelist[@]}")"
-if grep -qiE '^\+.*(fixme|todo)' <<< "$difflist"; then
+difflist="$(svn diff -x -U0 "${filelist[@]}" "${changelist[@]}" )"
+if grep -qiE "^\\+.*(${blacklist// /|})" <<< "$difflist"; then
   echo TODO or FIXME comments found:
   echo
-  grep -iEe '^\+.*(fixme|todo)' -e '^index:' <<< "$difflist" \
-    | grep -ie 'fixme' -e 'todo' -B 1
+  grep -iEe "^\\+.*(${blacklist// /|})" -e '^index:' <<< "$difflist" \
+    | grep --color=always -ie ${blacklist// / -e } -B 1
   echo
   echo to commit anyway, bypass the SVN wrapper:
   echo '$> `which svn` commit ...'
